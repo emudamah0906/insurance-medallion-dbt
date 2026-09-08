@@ -1,0 +1,16 @@
+# BigQuery, using the application-default credentials you just created.
+# Dataset sits in Montreal — same region as the client, and it keeps the
+# story tidy if anyone asks where the data lives.
+
+insurance_medallion:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: af-delinquency-de-2026
+      dataset: insurance_medallion
+      location: northamerica-northeast1
+      threads: 4
+      priority: interactive
+      job_retries: 1

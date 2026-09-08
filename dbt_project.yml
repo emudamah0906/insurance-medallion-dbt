@@ -1,0 +1,27 @@
+name: 'insurance_medallion'
+version: '1.0.0'
+config-version: 2
+profile: 'insurance_medallion'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  insurance_medallion:
+    bronze:
+      +materialized: view
+      +schema: bronze
+    silver:
+      +materialized: table
+      +schema: silver
+    gold:
+      +materialized: table
+      +schema: gold
+
+seeds:
+  insurance_medallion:
+    +schema: raw

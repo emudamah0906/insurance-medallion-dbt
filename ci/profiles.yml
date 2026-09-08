@@ -1,0 +1,12 @@
+# Profile used by CI for parsing only. dbt requires a profile to exist before it
+# will parse a project; this one is never connected to.
+insurance_medallion:
+  target: ci
+  outputs:
+    ci:
+      type: bigquery
+      method: oauth
+      project: ci-parse-only
+      dataset: ci
+      location: northamerica-northeast1
+      threads: 1

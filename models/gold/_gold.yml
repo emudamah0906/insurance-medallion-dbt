@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: dim_broker
+    columns:
+      - name: broker_key
+        tests: [unique, not_null]
+  - name: dim_policy
+    description: "SCD2. 5,602 rows — one per policy version."
+    columns:
+      - name: policy_key
+        tests: [unique, not_null]
+      - name: policy_natural_key
+        tests: [not_null]
+  - name: dim_date
+    columns:
+      - name: date_day
+        tests: [unique, not_null]
+  - name: fct_claim
+    description: "Grain: one claim. 12,000 rows. Point-in-time joined to the policy version in force."
+    columns:
+      - name: claim_id
+        tests: [unique, not_null]
+      - name: amount
+        tests: [not_null]

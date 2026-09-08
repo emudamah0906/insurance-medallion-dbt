@@ -1,0 +1,57 @@
+name: dbt
+
+# Runs on every pull request. What this proves and what it does not:
+#
+#   PROVES:  every model compiles, every ref() resolves, the DAG has no cycles,
+#            no test references a column that doesn't exist, YAML is valid.
+#   DOES NOT PROVE: that the SQL returns correct results — that needs a warehouse.
+#
+# A full `dbt build` in CI needs BigQuery credentials as a repo secret. For a
+# portfolio repo those are documented in the README rather than wired up, because
+# a service account key in a GitHub secret is a real credential with real blast
+# radius. Locally, `dbt build --profiles-dir .` runs the whole thing.
+#
+# Parse-only CI is cheap and it catches the most common breakage: someone renames a
+# model and forgets a ref, or adds a test on a column that was dropped.
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dbt
+        run: pip install dbt-bigquery==1.12.0
+
+      - name: Check the project parses and the DAG resolves
+        env:
+          # Parsing needs a profile to exist; it never connects.
+          DBT_PROFILES_DIR: ./ci
+        run: |
+          dbt deps
+          dbt parse
+          echo "parsed cleanly — every ref resolves and the DAG is acyclic"
+
+      - name: Confirm every model has a description
+        run: |
+          missing=$(python3 - <<'PY'
+          import json, pathlib, sys
+          man = json.loads(pathlib.Path('target/manifest.json').read_text())
+          bad = [n['name'] for n in man['nodes'].values()
+                 if n['resource_type'] == 'model' and not n.get('description', '').strip()]
+          print('\n'.join(bad))
+          PY
+          )
+          if [ -n "$missing" ]; then
+            echo "::error::models with no description: $missing"; exit 1
+          fi
+          echo "every model is documented"

@@ -1,0 +1,44 @@
+version: 2
+
+models:
+  - name: bronze_policies
+    description: >
+      Both policy extracts stacked, typed, extract_date preserved. Deliberately NOT
+      deduplicated — one row per policy per extract is the grain, and it is what makes
+      SCD2 possible in Silver.
+    columns:
+      - name: policy_id
+        description: Not unique here. Each policy appears once per extract, by design.
+        tests: [not_null]
+      - name: extract_date
+        tests: [not_null]
+
+  - name: bronze_claims
+    description: >
+      Claims, typed, nothing removed. Source contains 60 duplicated claim_ids
+      (12,060 rows, 12,000 distinct). They stay here and get deduped in Silver.
+    columns:
+      - name: claim_id
+        tests:
+          - not_null
+          # WARN, not error. Bronze promises fidelity to source, not uniqueness.
+          # The blocking unique test belongs on Silver, where dedupe has happened.
+          # A test that never fires is a test nobody reads — this one fires every
+          # build and reports exactly 60.
+          - unique:
+              config:
+                severity: warn
+      - name: policy_id
+        tests: [not_null]
+
+  - name: bronze_brokers
+    description: >
+      Brokers, typed. Source contains one exact duplicate row (BRK0008), so 51 rows
+      and 50 distinct brokers.
+    columns:
+      - name: broker_id
+        tests:
+          - not_null
+          - unique:
+              config:
+                severity: warn
