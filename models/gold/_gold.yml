@@ -23,3 +23,24 @@ models:
         tests: [unique, not_null]
       - name: amount
         tests: [not_null]
+
+  - name: fct_policy_month
+    description: >
+      One row per policy version per month of its term. Carries earned premium
+      (straight-line pro-rata by days on risk) and claims incurred in that month, so
+      loss ratio can be computed at any grain. Earned, not written — comparing claims
+      against written premium makes every month a policy is sold look wildly
+      profitable and every month after look like a disaster.
+    columns:
+      - name: policy_key
+        tests: [not_null]
+      - name: month_start
+        tests: [not_null]
+      - name: earned_premium
+        tests: [not_null]
+      - name: days_on_risk
+        tests:
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                max_value: 31

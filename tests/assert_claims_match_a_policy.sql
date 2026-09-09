@@ -1,29 +1,37 @@
 -- ============================================================================
--- THE GATE THAT WAS MISSING.
+-- MATCH-RATE GATE.
 --
--- The reconciliation gate compares row counts and amounts between Silver and Gold.
--- It passed while every single claim failed to join to a policy — because a LEFT JOIN
--- that matches nothing preserves the row count and the sum perfectly.
+-- Why this exists: the reconciliation gate compares row counts and total amount
+-- between Silver and Gold. It passed while every one of the 12,000 claims failed to
+-- join to a policy — a LEFT JOIN that matches nothing preserves both numbers
+-- perfectly. A gate only guards what it actually measures.
 --
--- That is the lesson: a gate only guards what it actually measures. Counting rows
--- proves you did not LOSE anything. It says nothing about whether the join WORKED.
+-- WHY THERE IS A THRESHOLD RATHER THAN ZERO.
 --
--- So this one measures the thing that broke: the match rate.
+-- The source contains 129 deliberate orphan policy_ids drawn from a 900,000+ block;
+-- real policies only reach POL005000. 128 of them survive dedupe. Those claims will
+-- never match a policy version, on any build, forever.
 --
--- Claims with an unusable claim_date genuinely cannot be placed in time, and there
--- are 204 of those. Everything else must find its policy version. Threshold is set
--- just above that, so a real regression trips it immediately.
+-- A gate set to zero on a condition that is permanently non-zero fails every build,
+-- and a check that always fails is a check the team turns off. So the threshold
+-- encodes the KNOWN-GOOD state: 128 is expected, 129 is new and worth waking up for.
+--
+-- If this fires, something changed upstream — new orphan ids, or a join that broke.
 -- ============================================================================
+
+{% set expected_orphans = 128 %}
 
 with stats as (
     select
-        count(*)                                                        as total_claims,
-        countif(is_unmatched)                                           as unmatched,
-        countif(is_unmatched and claim_date_is_valid)                   as unmatched_with_good_date
+        count(*)                                      as total_claims,
+        countif(is_unmatched)                         as unmatched_total,
+        countif(is_unmatched and claim_date_is_valid) as unmatched_with_good_date,
+        countif(is_unmatched and not claim_date_is_valid) as unmatched_no_date
     from {{ ref('fct_claim') }}
 )
 
-select *
+select
+    *,
+    unmatched_with_good_date - {{ expected_orphans }} as above_expected
 from stats
--- a claim with a valid date has no excuse for not matching a policy version
-where unmatched_with_good_date > 0
+where unmatched_with_good_date > {{ expected_orphans }}

@@ -9,7 +9,8 @@ models:
       - name: status
         tests:
           - accepted_values:
-              values: ['OPEN', 'CLOSED', 'DENIED', 'IN REVIEW']
+              arguments:
+                values: ['OPEN', 'CLOSED', 'DENIED', 'IN REVIEW']
 
   - name: silver_brokers
     columns:

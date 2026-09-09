@@ -25,7 +25,12 @@ typed as (
     select
         policy_id,
         broker_id,
-        trim(product)                as product,
+        -- upper AND trim. The source sends 5 products in 20 spellings:
+        -- 'Property', 'PROPERTY', 'property', '  Property '. Trimming alone leaves
+        -- three of them, so every report groups the same product into three rows.
+        -- Conforming means case and whitespace — doing one and forgetting the other
+        -- is the classic version of this bug, and it hides until someone sums a chart.
+        upper(trim(product))         as product,
         safe_cast(premium as numeric) as premium,
         upper(trim(status))          as status,
         coalesce(
